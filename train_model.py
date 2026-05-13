@@ -61,14 +61,4 @@ print(f"R2 Score: {r2}")
 # Save Model
 joblib.dump(pipeline, "models/insurance_model.pkl")
 
-# Create SHAP Explainer
-X_train_processed = pipeline.named_steps["preprocessor"].transform(X_train)
-
-explainer = shap.TreeExplainer(
-    pipeline.named_steps["model"]
-)
-
-# Save Explainer
-joblib.dump(explainer, "models/shap_explainer.pkl")
-
-print("Model and SHAP Explainer Saved!")
+print("Model Saved!")

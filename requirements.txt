@@ -1,9 +1,9 @@
 pandas
 numpy
 matplotlib
-seaborn
 scikit-learn
 streamlit
 joblib
 plotly
-shap
+shap==0.44.1
+numba==0.59.1

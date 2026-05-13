@@ -15,7 +15,10 @@ st.set_page_config(
 
 # Load Model
 model = joblib.load("models/insurance_model.pkl")
-explainer = joblib.load("models/shap_explainer.pkl")
+
+rf_model = model.named_steps["model"]
+
+explainer = shap.TreeExplainer(rf_model)
 
 # Custom CSS
 st.markdown("""
