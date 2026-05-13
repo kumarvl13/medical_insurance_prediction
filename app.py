@@ -112,68 +112,64 @@ if st.button("Predict Insurance Cost"):
 
     st.write("## AI Explainability using SHAP")
 
-    # Preprocess input
-    processed_input = model.named_steps[
-        "preprocessor"
-    ].transform(input_data)
+    try:
 
-    # SHAP Values
-    shap_values = explainer.shap_values(processed_input)
+        # Transform input
+        processed_input = model.named_steps[
+            "preprocessor"
+        ].transform(input_data)
 
-    # Feature Names
-    feature_names = model.named_steps[
-        "preprocessor"
-    ].get_feature_names_out()
+        # Convert sparse matrix to array if needed
+        if hasattr(processed_input, "toarray"):
+            processed_input = processed_input.toarray()
 
-    # SHAP DataFrame
-    shap_df = pd.DataFrame({
-        "Feature": feature_names,
-        "Impact": shap_values[0]
-    })
+        # Create SHAP Explainer
+        rf_model = model.named_steps["model"]
 
-    shap_df["AbsImpact"] = np.abs(shap_df["Impact"])
+        explainer = shap.TreeExplainer(rf_model)
 
-    shap_df = shap_df.sort_values(
-        by="AbsImpact",
-        ascending=False
-    )
+        # SHAP values
+        shap_values = explainer.shap_values(processed_input)
 
-    st.write("### Feature Contribution")
+        # Feature names
+        feature_names = model.named_steps[
+            "preprocessor"
+        ].get_feature_names_out()
 
-    # Plotly Bar Chart
-    import plotly.express as px
+        # SHAP dataframe
+        shap_df = pd.DataFrame({
+            "Feature": feature_names,
+            "Impact": shap_values[0]
+        })
 
-    fig = px.bar(
-        shap_df.head(10),
-        x="Impact",
-        y="Feature",
-        orientation='h',
-        title="Top Features Affecting Prediction"
-    )
+        shap_df["AbsImpact"] = np.abs(
+            shap_df["Impact"]
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        shap_df = shap_df.sort_values(
+            by="AbsImpact",
+            ascending=False
+        )
 
+        # Plotly Feature Importance
+        fig = px.bar(
+            shap_df.head(10),
+            x="Impact",
+            y="Feature",
+            orientation='h',
+            title="Top Features Affecting Prediction"
+        )
 
-    # SHAP Waterfall Plot
-    st.write("### SHAP Waterfall Explanation")
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
-    # Create Explanation Object
-    explanation = shap.Explanation(
-        values=shap_values[0],
-        base_values=explainer.expected_value[0],
-        data=processed_input[0],
-        feature_names=feature_names
-    )
+    except Exception as e:
 
-    # Plot
-    fig2, ax = plt.subplots(figsize=(10, 5))
-
-    shap.plots.waterfall(
-        explanation,
-        show=False
-    )
-
-    st.pyplot(fig2)
+        st.warning(
+            f"SHAP explanation unavailable: {e}"
+        )
 
     # Insights
     st.write("## AI Insights")
