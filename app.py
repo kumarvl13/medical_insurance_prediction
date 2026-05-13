@@ -1,10 +1,10 @@
-import shap
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 import pandas as pd
 import joblib
 import plotly.express as px
+import plotly.graph_objects as go
 
 # Page Config
 st.set_page_config(
@@ -17,8 +17,6 @@ st.set_page_config(
 model = joblib.load("models/insurance_model.pkl")
 
 rf_model = model.named_steps["model"]
-
-explainer = shap.TreeExplainer(rf_model)
 
 # Custom CSS
 st.markdown("""
@@ -96,6 +94,65 @@ if st.button("Predict Insurance Cost"):
     </div>
     """, unsafe_allow_html=True)
 
+    # Feature Importance
+    feature_importance = model.named_steps[
+        "model"
+    ].feature_importances_
+
+    feature_names = model.named_steps[
+        "preprocessor"
+    ].get_feature_names_out()
+
+    importance_df = pd.DataFrame({
+        "Feature": feature_names,
+        "Importance": feature_importance
+    })
+
+    importance_df = importance_df.sort_values(
+        by="Importance",
+        ascending=True
+    )
+
+    # Plotly Bar Chart
+    fig = px.bar(
+        importance_df,
+        x="Importance",
+        y="Feature",
+        orientation='h',
+        title="Feature Importance Analysis",
+        text_auto=".3f"
+    )
+
+    fig.update_layout(
+        height=500
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+    #Insurance Cost Meter
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=prediction,
+        title={'text': "Predicted Insurance Cost"},
+        gauge={
+            'axis': {'range': [0, 50000]},
+            'bar': {'thickness': 0.3},
+            'steps': [
+                {'range': [0, 10000], 'color': "green"},
+                {'range': [10000, 25000], 'color': "orange"},
+                {'range': [25000, 50000], 'color': "red"}
+            ]
+        }
+    ))
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
     # Risk Category
     if prediction < 5000:
         risk = "Low Risk"
@@ -106,70 +163,6 @@ if st.button("Predict Insurance Cost"):
 
     st.success(f"Risk Category: {risk}")
 
-    # =========================
-    # SHAP Explainability
-    # =========================
-
-    st.write("## AI Explainability using SHAP")
-
-    try:
-
-        # Transform input
-        processed_input = model.named_steps[
-            "preprocessor"
-        ].transform(input_data)
-
-        # Convert sparse matrix to array if needed
-        if hasattr(processed_input, "toarray"):
-            processed_input = processed_input.toarray()
-
-        # Create SHAP Explainer
-        rf_model = model.named_steps["model"]
-
-        explainer = shap.TreeExplainer(rf_model)
-
-        # SHAP values
-        shap_values = explainer.shap_values(processed_input)
-
-        # Feature names
-        feature_names = model.named_steps[
-            "preprocessor"
-        ].get_feature_names_out()
-
-        # SHAP dataframe
-        shap_df = pd.DataFrame({
-            "Feature": feature_names,
-            "Impact": shap_values[0]
-        })
-
-        shap_df["AbsImpact"] = np.abs(
-            shap_df["Impact"]
-        )
-
-        shap_df = shap_df.sort_values(
-            by="AbsImpact",
-            ascending=False
-        )
-
-        # Plotly Feature Importance
-        fig = px.bar(
-            shap_df.head(10),
-            x="Impact",
-            y="Feature",
-            orientation='h',
-            title="Top Features Affecting Prediction"
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-    except Exception as e:
-
-        st.warning(
-            f"SHAP explanation unavailable: {e}"
-        )
 
     # Insights
     st.write("## AI Insights")
